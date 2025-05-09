@@ -27,7 +27,7 @@ module.exports = class Receive {
     this.isUserRef = isUserRef;
   }
 
-  // Check if the event is a message or postback and
+  // Check if the event is a message or postback and - NOW THERE IS NO POSTBACK YET
   // call the appropriate handler function
   handleMessage() {
     let event = this.webhookEvent;
@@ -62,6 +62,7 @@ module.exports = class Receive {
       };
     }
 
+    //if there are multiple messsages to respond to user, delay 2s between each message
     if (Array.isArray(responses)) {
       let delay = 0;
       for (let response of responses) {

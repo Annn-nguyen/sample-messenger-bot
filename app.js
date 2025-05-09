@@ -22,7 +22,7 @@ const express = require("express"),
   i18n = require("./i18n.config"),
   app = express();
 
-var users = {};
+var users = {}; //this need to store to database 
 
 // Parse application/x-www-form-urlencoded
 app.use(
@@ -80,39 +80,17 @@ app.post("/webhook", (req, res) => {
 
     // Iterate over each entry - there may be multiple if batched
     body.entry.forEach(async function (entry) {
-      if ("changes" in entry) {
-        // Handle Page Changes event
-        let receiveMessage = new Receive();
-        if (entry.changes[0].field === "feed") {
-          let change = entry.changes[0].value;
-          switch (change.item) {
-            case "post":
-              return receiveMessage.handlePrivateReply(
-                "post_id",
-                change.post_id
-              );
-            case "comment":
-              return receiveMessage.handlePrivateReply(
-                "comment_id",
-                change.comment_id
-              );
-            default:
-              console.warn("Unsupported feed change type.");
-              return;
-          }
-        }
-      }
-
+      // not yet need to handle changes so i remove the change part
       // Iterate over webhook events - there may be multiple
       entry.messaging.forEach(async function (webhookEvent) {
-        // Discard uninteresting events
+        // Discard uninteresting events, just log and do nothing
         if ("read" in webhookEvent) {
           console.log("Got a read event");
           return;
         } else if ("delivery" in webhookEvent) {
           console.log("Got a delivery event");
           return;
-        } else if (webhookEvent.message && webhookEvent.message.is_echo) {
+        } else if (webhookEvent.message && webhookEvent.message.is_echo) { 
           console.log(
             "Got an echo of our send, mid = " + webhookEvent.message.mid
           );
@@ -134,6 +112,7 @@ app.post("/webhook", (req, res) => {
               GraphApi.getUserProfile(senderPsid)
                 .then((userProfile) => {
                   user.setProfile(userProfile);
+                  console.log("Can set the user profile");
                 })
                 .catch((error) => {
                   // The profile is unavailable
@@ -143,7 +122,7 @@ app.post("/webhook", (req, res) => {
                 .finally(() => {
                   console.log("locale: " + user.locale);
                   users[senderPsid] = user;
-                  i18n.setLocale("en_US");
+                  i18n.setLocale("en_US"); //it always set to US why bother getting from profile?
                   console.log(
                     "New Profile PSID:",
                     senderPsid,
