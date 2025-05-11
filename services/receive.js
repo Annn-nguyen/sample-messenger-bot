@@ -72,7 +72,7 @@ module.exports = class Receive {
   }
 
   // Handles messages events with text
-  handleTextMessage() { async () => {
+  async handleTextMessage() { 
     console.log(
       "Received text:",
       `${this.webhookEvent.message.text} for ${this.user.psid}`
@@ -98,6 +98,7 @@ module.exports = class Receive {
     "Though I can’t help being scared"  
     `
     const userId = this.user.psid;
+    const userConversations = new Map();
     const conversationChain = userConversations.get(userId);
 
     if (!conversationChain) {
@@ -148,7 +149,7 @@ module.exports = class Receive {
     }
     
     return responseText;
-  } };
+   };
     
 
   // Handles mesage events with attachments, maybe just logged and do nothing now
