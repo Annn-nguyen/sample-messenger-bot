@@ -147,6 +147,7 @@ app.post("/webhook", (req, res) => {
               "with locale:",
               i18n.getLocale()
             );
+            console.log("call receiveAndReturn");
             return receiveAndReturn(users[senderPsid], webhookEvent, false);
           }
         } else if (user_ref != null && user_ref != undefined) {
@@ -182,6 +183,8 @@ function isGuestUser(webhookEvent) {
 
 function receiveAndReturn(user, webhookEvent, isUserRef) {
   let receiveMessage = new Receive(user, webhookEvent, isUserRef);
+  console.log("route to receive.js");
+
   return receiveMessage.handleMessage();
 }
 

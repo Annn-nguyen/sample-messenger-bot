@@ -143,31 +143,4 @@ module.exports = class Response {
 
     return response;
   }
-
-  static genNuxMessage(user) {
-    let welcome = this.genText(
-      i18n.__("get_started.welcome", {
-        userFirstName: user.firstName
-      })
-    );
-
-    let guide = this.genText(i18n.__("get_started.guidance"));
-
-    let curation = this.genQuickReply(i18n.__("get_started.help"), [
-      {
-        title: i18n.__("menu.suggestion"),
-        payload: "CURATION"
-      },
-      {
-        title: i18n.__("menu.help"),
-        payload: "CARE_HELP"
-      },
-      {
-        title: i18n.__("menu.product_launch"),
-        payload: "PRODUCT_LAUNCH"
-      }
-    ]);
-
-    return [welcome, guide, curation];
-  }
 };
