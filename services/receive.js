@@ -16,8 +16,7 @@ const Response = require("./response"),
   config = require("./config");
 
 const {OpenAI} = require("openai");
-const {ConversationChain} = require("langchain/chains");
-const {BufferMemory} = require("langchain/memory");
+
 
 require("dotenv").config();
 
