@@ -20,7 +20,18 @@ const express = require("express"),
   User = require("./services/user"),
   config = require("./services/config"),
   i18n = require("./i18n.config"),
-  app = express();
+  app = express(),
+  mongoose = require("mongoose");
+  
+require("dotenv").config();
+mongoose.connect(process.env.MONGODB_URI, {
+  userNewUrlParser: true,
+  useUnifiedTopology: true,
+  
+})
+  .then(() => { console.log("MongoDB connected successfully"); })
+  .catch((err) => { console.error("MongoDB connection error:", err); });
+
 
 var users = {}; //this need to store to database 
 

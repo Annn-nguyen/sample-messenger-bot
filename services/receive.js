@@ -98,56 +98,7 @@ module.exports = class Receive {
     "Though I can’t help being scared"  
     `
     const userId = this.user.psid;
-    const userConversations = new Map();
-    const conversationChain = userConversations.get(userId);
-
-    if (!conversationChain) {
-      const memory = new BufferMemory({
-        returnMessages: true,
-        memoryKey: "chat_history",
-        humanPrefix: "user",
-        aiPrefix: "assistant"
-      });
-
-      const conversationChain = new ConversationChain({
-        llm: openai,
-        memory: memory,
-      });
-
-      // Add the instruction to conversation
-      await conversationChain.call({
-        input: instruction,
-      });
-
-      //set userID to conversationChain
-      userConversations.set(userId, conversationChain);
-    };
-
-    // Get the user's message
-    let userMessage = event.message.text.trim().toLowerCase();
-
-    // Handle start over
-    if (userMessage === "start over") {
-      conversationChain.memory.clear();
-      await conversationChain.call ({
-        input: instruction,
-      });
-      return Response.genText("Conversation reset. Do you want to start a new song lesson or practice with quiz?");
-    };
-
-    // Generate other response
-    let responseText;
-    try{
-      response = await conversationChain.call({
-        input: userMessage,
-      });
-      responseText = response.response;
-    } catch (error) {
-      console.error("Error calling model to generate response:", error);
-      responseText = "Sorry, I couldn't process your request now. Please try again";
-
-    }
-    
+    let responseText = "";
     return responseText;
    };
     
