@@ -8,7 +8,7 @@ import dotenv from "dotenv";
 
 import Receive from "./services/receive";
 import GraphApi from "./services/graph-api";
-import User from "./services/user";
+import User from "./models/User";
 import config from "./services/config";
 import i18n from "./i18n.config";
 
@@ -21,7 +21,8 @@ mongoose.connect(process.env.MONGODB_URI as string)
   .catch((err: Error) => { console.error("MongoDB connection error:", err); });
 
 const app = express();
-const users: { [key: string]: any } = {}; // Consider defining a User interface
+
+const users: { [key: string]: any } = {};
 
 app.use(
   express.urlencoded({
@@ -49,14 +50,14 @@ app.get("/webhook", (req: Request, res: Response) => {
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
 
-//Check if a token and mode is in the query string of the request
+  //Check if a token and mode is in the query string of the request
   if (mode && token) {
     if (mode === "subscribe" && token === config.verifyToken) {
-        //response with the challenge token from the request
+      //response with the challenge token from the request
       console.log("WEBHOOK_VERIFIED");
       res.status(200).send(challenge);
     } else {
-        //respond with 403 if the tokens do not match
+      //respond with 403 if the tokens do not match
       res.sendStatus(403);
     }
   }
@@ -68,7 +69,7 @@ app.post("/webhook", (req: Request, res: Response) => {
 
   console.log(`\u{1F7EA} Received webhook:`);
   console.dir(body, { depth: null });
-    //check if this is an event from a page subscription
+  //check if this is an event from a page subscription
   if (body.object === "page") {
     res.status(200).send("EVENT_RECEIVED");
 
@@ -94,15 +95,18 @@ app.post("/webhook", (req: Request, res: Response) => {
         const guestUser = isGuestUser(webhookEvent);
 
         if (senderPsid != null && senderPsid != undefined) {
-            
-          if (!(senderPsid in users)) {
+          const existingUser = await User.findOne({ messengerId: senderPsid });
+          if (existingUser == null) {
             // Handle for user not saved in DB
             // If user is not Guest, get profile from Graph API
             if (!guestUser) {
-              const user = new User(senderPsid);
               GraphApi.getUserProfile(senderPsid)
                 .then((userProfile: any) => {
-                  user.setProfile(userProfile);
+                  users[senderPsid] = User.create({
+                    messengerId: senderPsid,
+                    firstName: userProfile.first_name,
+                    locale: userProfile.locale,
+                  });
                   console.log("Can set the user profile");
                 })
                 .catch((error: any) => {
@@ -110,8 +114,6 @@ app.post("/webhook", (req: Request, res: Response) => {
                   console.log("Profile is unavailable:", error);
                 })
                 .finally(() => {
-                  console.log("locale: " + user.locale);
-                  users[senderPsid] = user;
 
                   // This sample code uses en_US 100%
                   i18n.setLocale("en_US");
@@ -156,7 +158,9 @@ app.post("/webhook", (req: Request, res: Response) => {
 });
 
 function setDefaultUser(id: string) {
-  const user = new User(id);
+  const user = User.create({
+    messengerId: id,
+  });
   users[id] = user;
   i18n.setLocale("en_US");
 }
@@ -179,57 +183,6 @@ function receiveAndReturn(user: any, webhookEvent: any, isUserRef: boolean) {
   return receiveMessage.handleMessage();
 }
 
-// Setup you app's messenger profile
-app.get("/profile", (req: Request, res: Response) => {
-  const token = req.query["verify_token"];
-  const mode = req.query["mode"];
-
-  if (!config.webhookUrl.startsWith("https://")) {
-    res.status(200).send("ERROR - Need a proper API_URL in the .env file");
-  }
-  let Profile = require("./services/profile.js");
-  Profile = new Profile();
-
-  // Check if a token and mode is in the query string of the request 
-  if (mode && token) {
-    if (token === config.verifyToken) {
-      if (mode == "webhook" || mode == "all") {
-        Profile.setWebhook();
-        res.write(
-          `<p>&#9989; Set app ${config.appId} call to ${config.webhookUrl}</p>`
-        );
-      }
-      if (mode == "profile" || mode == "all") {
-        Profile.setThread();
-        res.write(
-          `<p>&#9989; Set Messenger Profile of Page ${config.pageId}</p>`
-        );
-      }
-      //remove mode persona
-      if (mode == "nlp" || mode == "all") {
-        GraphApi.callNLPConfigsAPI();
-        res.write(
-          `<p>&#9989; Enabled Built-in NLP for Page ${config.pageId}</p>`
-        );
-      }
-      if (mode == "domains" || mode == "all") {
-        Profile.setWhitelistedDomains();
-        res.write(
-          `<p>&#9989; Whitelisted domains: ${config.whitelistedDomains}</p>`
-        );
-      }
-      if (mode == "private-reply") {
-        Profile.setPageFeedWebhook();
-        res.write(`<p>&#9989; Set Page Feed Webhook for Private Replies.</p>`);
-      }
-      res.status(200).end();
-    } else {
-      res.sendStatus(403);
-    }
-  } else {
-    res.sendStatus(404);
-  }
-});
 
 function verifyRequestSignature(req: Request, res: Response, buf: Buffer) {
   const signature = req.headers["x-hub-signature"] as string | undefined;
@@ -256,15 +209,15 @@ config.checkEnvVariables();
 
 const listener = app.listen(config.port, () => {
   console.log(`The app is listening on port ${(listener.address() as any).port}`);
-if (config.appUrl && config.verifyToken) {
+  if (config.appUrl && config.verifyToken) {
     console.log(
-        "Is this the first time running?\n" +
-            "Make sure to set the Messenger profile and webhook by visiting:\n" +
-            config.appUrl +
-            "/profile?mode=all&verify_token=" +
-            config.verifyToken
+      "Is this the first time running?\n" +
+      "Make sure to set the Messenger profile and webhook by visiting:\n" +
+      config.appUrl +
+      "/profile?mode=all&verify_token=" +
+      config.verifyToken
     );
-}
+  }
 
   if (config.pageId) {
     console.log("Test your app by messaging:");

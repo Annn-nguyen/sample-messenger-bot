@@ -1,5 +1,5 @@
-import Thread , {IThread} from "../models/Thread";
-import Message, {IMessage} from "../models/Message";
+import Thread , {IThread} from "../../models/Thread";
+import Message, {IMessage} from "../../models/Message";
 
 // Create a new thread and save it to database
 
