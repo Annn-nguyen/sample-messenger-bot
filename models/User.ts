@@ -7,7 +7,6 @@ export interface IUser extends Document {
 };
 
 const userSchema = new Schema<IUser>({
-    id: { type: String, required: true, unique: true },
     firstName: { type: String },
     messengerId: { type: String},
     locale: { type: String },

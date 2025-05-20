@@ -7,6 +7,7 @@ import { ChatOpenAI } from "@langchain/openai";
 import { AIMessage, BaseMessage, SystemMessage } from "@langchain/core/messages";
 
 import dotenv from "dotenv";
+import { stringify } from "querystring";
 dotenv.config();
 
 const model = new ChatOpenAI({
@@ -36,7 +37,10 @@ export default class Receive {
 
     try {
       if (event.message) {
-        console.log("Start handleTextMessage");
+        console.log("Start handleTextMessage:");
+        console.log("User:", this.user);
+        console.log("WebhookEvent:", this.webhookEvent);
+        console.log("isUserRef:", this.isUserRef);
         responses = await this.handleTextMessage();
       }
     } catch (error) {

@@ -129,6 +129,7 @@ export default class GraphApi {
     let response = await fetch(url.toString());
     if (response.ok) {
       let userProfile = await response.json();
+      console.log(`User profile for ${senderIgsid}:`, userProfile);
       return {
         firstName: userProfile.first_name,
         lastName: userProfile.last_name,

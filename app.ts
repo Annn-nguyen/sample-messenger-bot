@@ -91,6 +91,7 @@ app.post("/webhook", (req: Request, res: Response) => {
         }
         // Get sender PSID, user referral and check if user is a guest from chatplugin
         const senderPsid = webhookEvent.sender.id;
+        console.log("Sender PSID:", senderPsid);
         const user_ref = webhookEvent.sender.user_ref;
         const guestUser = isGuestUser(webhookEvent);
 
@@ -102,12 +103,15 @@ app.post("/webhook", (req: Request, res: Response) => {
             if (!guestUser) {
               GraphApi.getUserProfile(senderPsid)
                 .then((userProfile: any) => {
-                  users[senderPsid] = User.create({
+                  return User.create({
                     messengerId: senderPsid,
                     firstName: userProfile.first_name,
                     locale: userProfile.locale,
                   });
-                  console.log("Can set the user profile");
+                })
+                .then((createdUser: any) => {
+                  users[senderPsid] = createdUser;
+                  console.log("User profile created:", createdUser);
                 })
                 .catch((error: any) => {
                   console.log(JSON.stringify(body));
