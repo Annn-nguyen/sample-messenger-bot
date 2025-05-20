@@ -2,13 +2,13 @@ import mongoose , { Document, Schema } from "mongoose";
 
 export interface IUser extends Document {
     firstName? : String;
-    messengerId? : String;
+    psid? : String;
     locale? : String;
 };
 
 const userSchema = new Schema<IUser>({
     firstName: { type: String },
-    messengerId: { type: String},
+    psid: { type: String},
     locale: { type: String },
 });
 

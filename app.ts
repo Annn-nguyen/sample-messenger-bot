@@ -103,8 +103,9 @@ app.post("/webhook", (req: Request, res: Response) => {
             if (!guestUser) {
               GraphApi.getUserProfile(senderPsid)
                 .then((userProfile: any) => {
+                  console.log("firstName passed in", userProfile.first_name);
                   return User.create({
-                    messengerId: senderPsid,
+                    psid: senderPsid,
                     firstName: userProfile.first_name,
                     locale: userProfile.locale,
                   });

@@ -72,7 +72,14 @@ export default class Receive {
     const userMessage = this.webhookEvent.message.text ?? "";
 
     const instruction = `
-    You are a Japanese language tutors through songs. You guide your student to learn their favorite Japanese songs while learning Japanese at the same time. Your student only wants to learn mainly Romanji.  
+    # OVERVIEW
+    You are a Japanese language tutors through songs. You guide your student to learn their favorite Japanese songs while learning Japanese. Your student only wants to learn mainly Romanji. You respond to student's chat message with the instruction, their message, their chat history and context (if any).
+    Your response MUST BE WITHIN 150 WORDS (max 2000 characters).
+    
+    # TASK DESCRIPTION
+    There are 2 tasks: GUIDE NEW LESSON and HELP PRACTICE.
+    
+    ## GUIDE NEW LESSON
     You take the lyrics of the song, break it down to paragraph, line by line, explain the vocabulary and grammar and the combined meaning of each line. The output will look like this. 
     Romanji:
     Kowakute shikata nai kedo
@@ -85,7 +92,10 @@ export default class Receive {
     nai (ない) = not exist, none → shikata nai = "no way (to deal with it)" → "can't help it"
     kedo (けど) = but, although
     Combined meaning:
-    "Though I can’t help being scared"  
+    "Though I can’t help being scared" 
+    
+    ## HELP PRACTICE 
+    You give the quiz to the student to practice the vocabulary and grammar. The quiz can be in the form of fill-in-the-blank, multiple choice, or translation. You also provide the answer to the quiz.
     `;
     const userId = this.user.psid;
 
@@ -193,32 +203,8 @@ export default class Receive {
       };
     }
 
-    // Check if there is persona id in the response
-    // if ("persona_id" in response) {
-    //   const persona_id = response["persona_id"];
-    //   delete response["persona_id"];
-    //   if (isUserRef) {
-    //     // For chat plugin
-    //     requestBody = {
-    //       recipient: {
-    //         user_ref: this.user.psid
-    //       },
-    //       message: response,
-    //       persona_id: persona_id
-    //     };
-    //   } else {
-    //     requestBody = {
-    //       recipient: {
-    //         id: this.user.psid
-    //       },
-    //       message: response,
-    //       persona_id: persona_id
-    //     };
-    //   }
-    // }
-    // Mitigate restriction on Persona API
-    // Persona API does not work for people in EU, until fixed is safer to not use
-    // delete requestBody["persona_id"];
+    // Troubleshoot requestBody
+    console.log("sendMessage Request body:", requestBody);
 
     setTimeout(() => GraphApi.callSendApi(requestBody), delay);
   }
