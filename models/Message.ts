@@ -1,8 +1,7 @@
 import mongoose, { Schema, model } from "mongoose";
-import { v4 as uuidv4 } from 'uuid';
 
 export interface IMessage extends Document {
-    threadId: String;
+    threadId?: String;
     sender : String;
     userId?: String;
     text: String;
@@ -10,7 +9,7 @@ export interface IMessage extends Document {
 };
 
 const messageSchema = new Schema<IMessage>({
-    threadId: {type: String, required: true},
+    threadId: {type: String},
     sender: {type: String, enum: ['user', 'bot'], required: true},
     userId: {type: String},
     text: { type: String, required: true},

@@ -5,9 +5,13 @@ import config from "./config";
 import { OpenAI } from "openai";
 import { ChatOpenAI } from "@langchain/openai";
 import { AIMessage, BaseMessage, SystemMessage } from "@langchain/core/messages";
+import Thread from "../models/Thread";
+import Message from "../models/Message";
 
 import dotenv from "dotenv";
 import { stringify } from "querystring";
+import e from "express";
+import { time } from "console";
 dotenv.config();
 
 const model = new ChatOpenAI({
@@ -54,16 +58,40 @@ export default class Receive {
     if (Array.isArray(responses)) {
       let delay = 0;
       for (const response of responses) {
-        this.sendMessage(response, delay * 2000, this.isUserRef);
+        this.sendMessage(response.responseText, delay * 2000, this.isUserRef);
         delay++;
-      }
+        // save the response to the database
+        try {
+          const newMessage = await Message.create({
+            threadId: response.threadId,
+            sender: "bot",
+            timestamp: new Date(),
+            text: response.responseText
+          })
+        } catch (error) {
+          console.error("Error creating new message:", error);
+        }      }
     } else {
-      this.sendMessage(responses, 1, this.isUserRef);
+      this.sendMessage(responses.responseText, 1, this.isUserRef);
+      // save the response to the database
+      try {
+        const newMessage = await Message.create({
+          threadId: responses.threadId,
+          sender: "bot",
+          timestamp: new Date(),
+          text: responses.responseText
+        })
+      } catch (error) {
+        console.error("Error creating new message:", error);
+      };
+      
     }
+
+
   }
 
   // Handles messages events with text
-  async handleTextMessage(): Promise<string> {
+  async handleTextMessage(): Promise<{responseText: string, threadId: string}> {
     console.log(
       "Received text:",
       `${this.webhookEvent.message.text} for ${this.user.psid}`
@@ -71,9 +99,61 @@ export default class Receive {
 
     const userMessage = this.webhookEvent.message.text ?? "";
 
+    // Save thread and message to the database
+    let existingThread;
+    existingThread = await Thread.findOne({
+      userId: this.user.psid,
+      status: "open"
+    });
+
+    if (!existingThread) {
+      try {
+        const newThread = await Thread.create({
+          userId: this.user.psid,
+          topic: "Japanese Language Tutor",
+          status: "open",
+          startTime: new Date()
+        });
+        console.log("New thread created:", newThread);
+        existingThread = newThread;
+      } catch (error) {
+        console.error("Error creating new thread:", error);
+      };
+    }
+
+    let newMessage;
+    try {
+      newMessage = await Message.create({
+        threadId: existingThread._id,
+        sender: "user",
+        userId: this.user.userId,
+        text: userMessage,
+        timestamp: new Date()
+      });
+      console.log("New message created:", newMessage);
+    } catch (error) {
+      console.error("Error creating new message:", error);
+    };
+
+    // Retrieve the lastest 10 messages from the thread
+    const lastMessages = await Message.find({
+      threadId: existingThread._id
+    })
+      .sort({ timestamp: -1 })
+      .limit(10)
+      .exec();
+    // Reverse the order of messages to get the conversation history
+    const chatHistory = lastMessages
+      .reverse()
+      .map((message) => `At ${message.timestamp} from ${message.sender}: ${message.text}`)
+      .join("\n");
+    console.log("Chat history:", chatHistory);
+
+
+    // Call AI to get the response
     const instruction = `
     # OVERVIEW
-    You are a Japanese language tutors through songs. You guide your student to learn their favorite Japanese songs while learning Japanese. Your student only wants to learn mainly Romanji. You respond to student's chat message with the instruction, their message, their chat history and context (if any).
+    You are a language tutors through songs. You guide your student to learn their favorite songs while learning foreign language (focus on listening and speaking). You respond to student's chat message with the instruction, their message, their chat history and context (if any).
     Your response MUST BE WITHIN 150 WORDS (max 2000 characters).
     
     # TASK DESCRIPTION
@@ -86,7 +166,7 @@ export default class Receive {
     Translation:
     "I'm so scared I can't help it, but..."
     Breakdown:
-    kowai (怖い) = scary, afrai
+    kowai (怖い) = scary, afraid
     ~kute (〜くて) = te-form of kowai (to connect to next phrase)
     shikata (仕方) = way, means, method
     nai (ない) = not exist, none → shikata nai = "no way (to deal with it)" → "can't help it"
@@ -99,7 +179,8 @@ export default class Receive {
     `;
     const userId = this.user.psid;
 
-    const prompt = `${instruction} \n\n User's message is: ${userMessage}`;   
+    const prompt = `${instruction} \n\n Current coversation is: ${chatHistory}`;
+    console.log("$$$$$$ PROMPT: ", prompt);   
     const response = await model.invoke([new SystemMessage(prompt)]);
     // Normalize response.content to always be a string
   let responseText: string;
@@ -112,7 +193,7 @@ export default class Receive {
   }
 
     console.log("Model response: ", responseText);
-    return responseText;
+    return {responseText, threadId: existingThread._id};
   }
 
   // Handles message events with attachments
