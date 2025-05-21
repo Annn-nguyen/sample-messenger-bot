@@ -84,6 +84,17 @@ export default class Receive {
       } catch (error) {
         console.error("Error creating new message:", error);
       };
+    if (responses.closeLesson) {
+      // update the thread status to close
+      try {
+        const updatedThread = await Thread.findByIdAndUpdate(
+          responses.threadId,
+          { status: "closed" },
+        );
+        console.log("Thread updated as closed:", updatedThread);
+      } catch (error) {
+        console.error("Error updating thread:", error);
+      }
       
     }
 
@@ -91,7 +102,9 @@ export default class Receive {
   }
 
   // Handles messages events with text
-  async handleTextMessage(): Promise<{responseText: string, threadId: string}> {
+  async handleTextMessage(): Promise<{responseText: string, threadId: string, closeLesson: boolean }> {
+    // Set closeLesson to false by default
+    let closeLesson = false;
     console.log(
       "Received text:",
       `${this.webhookEvent.message.text} for ${this.user.psid}`
@@ -100,7 +113,7 @@ export default class Receive {
     const userMessage = this.webhookEvent.message.text ?? "";
 
     // Save thread and message to the database
-    let existingThread;
+    let existingThread : any;
     existingThread = await Thread.findOne({
       userId: this.user.psid,
       status: "open"
@@ -121,7 +134,7 @@ export default class Receive {
       };
     }
 
-    let newMessage;
+    let newMessage : any;
     try {
       newMessage = await Message.create({
         threadId: existingThread._id,
@@ -135,12 +148,12 @@ export default class Receive {
       console.error("Error creating new message:", error);
     };
 
-    // Retrieve the lastest 10 messages from the thread
+    // Retrieve the lastest 50 messages from the thread
     const lastMessages = await Message.find({
       threadId: existingThread._id
     })
       .sort({ timestamp: -1 })
-      .limit(10)
+      .limit(50)
       .exec();
     // Reverse the order of messages to get the conversation history
     const chatHistory = lastMessages
@@ -149,7 +162,16 @@ export default class Receive {
       .join("\n");
     console.log("Chat history:", chatHistory);
 
-
+    let responseText : string = "";
+    // if user wants to close the current lesson, send a closure message and update the thread
+    const closeLessonKeywords = ["close lesson", "start new lesson", "finish lesson"];
+    if (closeLessonKeywords.some(keyword => userMessage.toLowerCase().includes(keyword))) {
+      console.log("User want to close the lesson");
+      responseText = "Yes, I will close the lesson and update your progress (lesson history and vocabulary) in the system. You can start a new lesson anytime by sending me a message.";
+      closeLesson = true;
+      return {responseText, threadId: existingThread._id, closeLesson: closeLesson};
+    };
+      
     // Call AI to get the response
     const instruction = `
     # OVERVIEW
@@ -183,7 +205,6 @@ export default class Receive {
     console.log("$$$$$$ PROMPT: ", prompt);   
     const response = await model.invoke([new SystemMessage(prompt)]);
     // Normalize response.content to always be a string
-  let responseText: string;
   if (typeof response.content === "string") {
     responseText = response.content;
   } else if (Array.isArray(response.content)) {
@@ -193,7 +214,7 @@ export default class Receive {
   }
 
     console.log("Model response: ", responseText);
-    return {responseText, threadId: existingThread._id};
+    return {responseText, threadId: existingThread._id, closeLesson: closeLesson};
   }
 
   // Handles message events with attachments
